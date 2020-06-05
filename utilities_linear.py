@@ -11,13 +11,22 @@ class ContextualBandit(object):
     def generate_reward(self,i):
         raise NotImplementedError
 
+EPS = .000000001
+
+
+def helper(x):
+    if x < 0:
+        return 1
+    else:
+        return x
 
 
 
 class LinearBandit(ContextualBandit):
-    def __init__(self, theta, mu, err_var, A_0):
+    def __init__(self, theta, mu, tau, err_var, A_0):
         self.theta = theta
         self.mu = mu
+        self.tau = tau
 
         self.err_var = err_var
         self.A_0 = A_0
@@ -28,8 +37,15 @@ class LinearBandit(ContextualBandit):
 
         self.probas =  [np.dot(self.A_0[:,i], self.theta) for i in range(self.K)]
         self.costs = [np.dot(self.A_0[:,i], self.theta) for i in range(self.K)]
+        self.opt_scalings = [helper(min(1, self.tau/(self.costs[k]+EPS))) for k in range(self.K)]
 
-        self.best_proba = max(self.probas)
+        self.scaled_probas = [self.probas[k]*self.opt_scalings[k] for k in range(self.K)]
+        self.scaled_costs = [self.costs[k]*self.opt_scalings[k] for k in range(self.K)]
+        self.best_action = np.argmax(self.scaled_probas)
+        self.best_proba = self.scaled_probas[self.best_action]
+
+        self.best_cost = self.scaled_costs[self.best_action]
+        
 
     def generate_context(self):
         ### If we change this to have a changing context, uncomment the following lines:
@@ -38,13 +54,14 @@ class LinearBandit(ContextualBandit):
         # self.best_proba = max( self.probas )
         return self.A_0
 
-    def generate_reward(self, i, scaling = 1):
-        rwd = scaling*self.probas[i] + np.random.normal(0, self.err_var, 1)
+
+    def generate_reward(self, i, scaling = 1, real = False):
+        rwd = scaling*self.probas[i] + (1-real)*np.random.normal(0, self.err_var, 1)
 
         return rwd
 
-    def generate_cost(self, i, scaling = 1):
-        cost =  scaling*self.costs[i] + np.random.normal(0, self.err_var, 1)
+    def generate_cost(self, i, scaling = 1, real = False):
+        cost =  scaling*self.costs[i] + (1-real)*np.random.normal(0, self.err_var, 1)
         return cost
 
 
@@ -67,9 +84,9 @@ class Solver(object):
         self.regret = 0.  # Cumulative regret.
         self.regrets = []  # History of cumulative regret.
 
-    def update_regret(self, i):
+    def update_regret(self, i, scaling):
         # i (int): index of the selected machine.
-        instant_regret = self.bandit.best_proba - self.bandit.probas[i]
+        instant_regret = self.bandit.best_proba - scaling*self.bandit.probas[i]
         self.regret += instant_regret
         self.regrets.append(self.regret)
         return instant_regret
@@ -86,14 +103,14 @@ class Solver(object):
 
 
 class LinUCB(Solver):
-    def __init__(self, bandit, lam, nm_ini, tau = 1, cost_upper_bound = 10):
+    def __init__(self, bandit, lam, nm_ini, tau = 1):
         """
 
         init_proba (float): default to be 0.0: pesimistic initialization.
         """
         super(LinUCB, self).__init__(bandit)
         ##### Check the bandit instance is a LinearBandit
-        self.cost_upper_bound = cost_upper_bound
+        self.cost_upper_bound = 2*np.max(bandit.costs)
         self.d, self.K = bandit.context_shape
         self.tau = tau
         self.pulls = [0]*self.K
@@ -116,7 +133,7 @@ class LinUCB(Solver):
     def scale_context_to_safety(self, UCB_cost):
         scalings = np.zeros(self.K)
         for k in range(self.K):
-            scalings[k] = min(1, self.tau/UCB_cost[k])
+            scalings[k] = helper(min(1, self.tau/(UCB_cost[k]+EPS)))
         return scalings
 
     def get_arm(self, context=None):
@@ -173,7 +190,7 @@ class LinUCB(Solver):
 
     def update_X_and_V(self, context, i, scaling):
         self.X.append(scaling*context[:, i])
-        print(scaling)
+        #print(scaling)
         self.X_numpy = np.array( self.X )
         self.V += np.outer(scaling*context[:, i], scaling*context[:,i])
 
@@ -198,7 +215,9 @@ class LinUCB(Solver):
         
         self.update_X_and_V(context, i, scaling)
         r = self.bandit.generate_reward(i, scaling)
+        r_real = self.bandit.generate_reward(i, scaling, real = True)
         c = self.bandit.generate_cost(i, scaling)
+        c_real = self.bandit.generate_cost(i, scaling, real = True)
         self.Y.append(r)
         self.C.append(c)
         self.Y_numpy = np.array(self.Y)
@@ -207,7 +226,7 @@ class LinUCB(Solver):
         #self.estimates[i] = (self.counts[i]*self.estimates[i] + r)/(self.counts[i] + 1.)
         self.counts[i] += 1
 
-        return context,i, r, c
+        return context,i, scaling, r_real, c_real
 
 
 
