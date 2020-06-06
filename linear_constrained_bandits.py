@@ -9,9 +9,9 @@ from utilities_linear import LinearBandit, LinUCB
 
 
 
-# ray.init()
+ray.init()
 
-# @ray.remote
+@ray.remote
 def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini):
 	bandit = LinearBandit( theta, mu, tau, err_var, A_0 )
 
@@ -39,8 +39,8 @@ def strided_method(ar):
 
 
 
-num_repetitions = 10
-T = 1000
+num_repetitions = 3
+T = 100
 d = 10
 theta = np.arange(d)
 theta = theta/np.max(theta)
@@ -51,14 +51,14 @@ A_0 = strided_method(np.arange(d))#np.eye(10)
 lam = .1
 nm_ini = 0
 
-tau = .5
+tau = .2
 
 
 
 
-#linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
-#linucb_regrets = ray.get(linucb_regrets)
-linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
+linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
+linucb_regrets = ray.get(linucb_regrets)
+#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
 
 opt_reward = linucb_regrets[0][3]
 opt_cost = linucb_regrets[0][4]
@@ -144,6 +144,11 @@ plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_re
 plt.legend(loc="lower right")
 plt.savefig("./Linear_Reward_{}.png".format(tau))
 # ####################
+
+import pickle
+
+pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("data_linear_{}.p".format(tau), "wb"))
+
 
 
 

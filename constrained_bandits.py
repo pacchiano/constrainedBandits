@@ -123,7 +123,7 @@ reward_gaussian_arms = [SimpleGaussianArm(mean, .1, truncated = True) for mean i
 cost_gaussian_arms = [SimpleGaussianArm(mean, .1, truncated = True) for mean in cost_gaussian_means]
 banditenv = DoubleMultiArm(reward_gaussian_arms, cost_gaussian_arms)
 
-threshold = .2
+threshold = 1
 num_arms = len(reward_gaussian_means)
 
 opt_policy = banditenv.get_optimal_policy(threshold)
