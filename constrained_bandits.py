@@ -111,7 +111,7 @@ def get_summary(rewards_costs, num_repetitions, opt_reward, T):
 
 T = 1000000
 #T = 100
-num_repetitions = 3
+num_repetitions = 10
 
 
 ##################################################
