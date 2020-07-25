@@ -98,13 +98,12 @@ std_reward = np.std(reward_summary, axis = 0)
 
 
 
-
-
 font = {#'family' : 'normal',
         #'weight' : 'bold',
         'size'   : 16}
 
 
+#print("alskdmfalskdmfalskdfmaslkdmfalsdkmfalskdfm ")
 #IPython.embed()
 timesteps = np.arange(T) + 1
 #IPython.embed()
@@ -117,9 +116,9 @@ plt.fill_between(timesteps, mean_regret - .5*std_regret, mean_regret + .5*std_re
 #IPython.embed()
 #plt.figure(figsize=(40,20))
 plt.legend(loc="lower right")
-plt.savefig("./Linear_Regret_{}.png".format(tau))
+plt.savefig("./linear_plots/Linear_Regret_{}.png".format(tau))
 # ####################
-
+#print("asldkfmaslkdfmasldkfmasldkmfalskdmfalskdmfalskdfm")
 
 
 plt.figure(figsize=(5,5))
@@ -133,7 +132,7 @@ plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, co
 #IPython.embed()
 #plt.figure(figsize=(40,20))
 plt.legend(loc="lower right")
-plt.savefig("./Linear_Cost_{}.png".format(tau))
+plt.savefig("./linear_plots/Linear_Cost_{}.png".format(tau))
 # ####################
 plt.figure(figsize=(5,5))
 
@@ -142,12 +141,12 @@ plt.plot(timesteps, [opt_reward]*T, label = "Opt Reward", color = "blue")
 plt.plot(timesteps, mean_reward, label = "LinUCB ", color = "red")
 plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
 plt.legend(loc="lower right")
-plt.savefig("./Linear_Reward_{}.png".format(tau))
+plt.savefig("./linear_plots/Linear_Reward_{}.png".format(tau))
 # ####################
 
 import pickle
 
-pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("data_linear_{}.p".format(tau), "wb"))
+pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("./linear_plots/data_linear_{}.p".format(tau), "wb"))
 
 
 
