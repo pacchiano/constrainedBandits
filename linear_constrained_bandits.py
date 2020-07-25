@@ -42,7 +42,7 @@ def strided_method(ar):
 
 
 num_repetitions = 3
-T = 1000000
+T = 10000
 d = 10
 theta = np.arange(d)
 theta = theta/np.max(theta)
