@@ -5,8 +5,9 @@ import numpy as np
 from math import log, exp
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+import matplotlib
 
-from utilities_linear import LinearBandit, LinUCB
+from utilities_linear import LinearBandit, LinUCB, LinTS
 
 
 
@@ -14,10 +15,13 @@ from utilities_linear import LinearBandit, LinUCB
 ray.init()
 
 @ray.remote
-def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini):
+def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS = False):
 	bandit = LinearBandit( theta, mu, tau, err_var, A_0 )
 
-	solv = LinUCB(bandit, lam, nm_ini, tau)
+	if TS:
+		solv = LinTS(bandit, lam, nm_ini, tau)
+	else:
+		solv = LinUCB(bandit, lam, nm_ini, tau)
 
 	opt_reward = bandit.best_proba
 	opt_cost = bandit.best_cost
@@ -42,7 +46,7 @@ def strided_method(ar):
 
 
 num_repetitions = 3
-T = 100000
+T = 1000000
 d = 10
 theta = np.arange(d)
 theta = theta/np.max(theta)
@@ -54,13 +58,19 @@ lam = .1
 nm_ini = 0
 
 
+TS  = True
+
+if TS:
+	algo_label = "Safe-LTS"
+else:
+	algo_label = "HPLC-LUCB"
 
 for tau in [.2,.5,.8,1 ]:
 
 
 
 
-	linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
+	linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS) for _ in range(num_repetitions) ]
 	linucb_regrets = ray.get(linucb_regrets)
 	#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
 
@@ -105,6 +115,7 @@ for tau in [.2,.5,.8,1 ]:
 	font = {#'family' : 'normal',
 	        #'weight' : 'bold',
 	        'size'   : 16}
+	matplotlib.rc('font', **font)
 
 
 	#print("alskdmfalskdmfalskdfmaslkdmfalsdkmfalskdfm ")
@@ -114,15 +125,15 @@ for tau in [.2,.5,.8,1 ]:
 	plt.figure(figsize=(5,5))
 
 	plt.title("Regret")
-	plt.plot(timesteps, mean_regret, label = "LinUCB ", color = "red")
+	plt.plot(timesteps, mean_regret, label = algo_label, color = "red")
 	plt.fill_between(timesteps, mean_regret - .5*std_regret, mean_regret + .5*std_regret, color = "red", alpha = .1 )
 	#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
 	plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
 	#IPython.embed()
 	#plt.figure(figsize=(40,20))
-	plt.legend(loc="lower right")
-	plt.savefig("./linear_plots/Linear_Regret_{}.png".format(tau))
+	plt.legend(loc="lower right",  fontsize = 15)
+	plt.savefig("./linear_plots/Linear_Regret_{}_{}.png".format(tau, algo_label))
 	# ####################
 	#print("asldkfmaslkdfmasldkfmasldkmfalskdmfalskdmfalskdfm")
 
@@ -132,7 +143,7 @@ for tau in [.2,.5,.8,1 ]:
 	plt.title("Cost")
 	plt.plot(timesteps, [tau]*T, label = "Threshold", color = "black")
 	plt.plot(timesteps, [opt_cost]*T, label = "Opt Cost", color = "blue")
-	plt.plot(timesteps, mean_cost, label = "LinUCB ", color = "red")
+	plt.plot(timesteps, mean_cost, label = algo_label, color = "red")
 
 	plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, color = "red", alpha = .1 )
 	#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
@@ -141,25 +152,25 @@ for tau in [.2,.5,.8,1 ]:
 
 	#IPython.embed()
 	#plt.figure(figsize=(40,20))
-	plt.legend(loc="lower right")
-	plt.savefig("./linear_plots/Linear_Cost_{}.png".format(tau))
+	plt.legend(loc="lower right", fontsize = 15)
+	plt.savefig("./linear_plots/Linear_Cost_{}_{}.png".format(tau, algo_label))
 	# ####################
 	plt.figure(figsize=(5,5))
 
 	plt.title("Reward")
 	plt.plot(timesteps, [opt_reward]*T, label = "Opt Reward", color = "blue")
-	plt.plot(timesteps, mean_reward, label = "LinUCB ", color = "red")
+	plt.plot(timesteps, mean_reward, label = algo_label, color = "red")
 	plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
 	#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
 	plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
-	plt.legend(loc="lower right")
-	plt.savefig("./linear_plots/Linear_Reward_{}.png".format(tau))
+	plt.legend(loc="lower right",  fontsize = 15)
+	plt.savefig("./linear_plots/Linear_Reward_{}_{}.png".format(tau, algo_label))
 	# ####################
 
 	import pickle
 
-	pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("./linear_plots/data_linear_{}.p".format(tau), "wb"))
+	pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("./linear_plots/data_linear_{}_{}.p".format(tau, algo_label), "wb"))
 
 
 
