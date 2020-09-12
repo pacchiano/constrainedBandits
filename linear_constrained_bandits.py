@@ -46,7 +46,7 @@ def strided_method(ar):
 
 
 num_repetitions = 3
-T = 100000
+T = 20000
 d = 10
 theta = np.arange(d)
 theta = theta/np.max(theta)
@@ -58,7 +58,7 @@ lam = .1
 nm_ini = 0
 
 
-TS  = True
+TS  = False
 
 if TS:
 	algo_label = "Safe-LTS"

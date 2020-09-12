@@ -36,7 +36,7 @@ class LinearBandit(ContextualBandit):
         self.n = self.K
 
         self.probas =  [np.dot(self.A_0[:,i], self.theta) for i in range(self.K)]
-        self.costs = [np.dot(self.A_0[:,i], self.theta) for i in range(self.K)]
+        self.costs = [np.dot(self.A_0[:,i], self.mu) for i in range(self.K)]
         self.opt_scalings = [helper(min(1, self.tau/(self.costs[k]+EPS))) for k in range(self.K)]
 
         self.scaled_probas = [self.probas[k]*self.opt_scalings[k] for k in range(self.K)]
