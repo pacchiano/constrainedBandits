@@ -6,10 +6,13 @@ from math import log, exp
 import matplotlib
 import matplotlib.pyplot as plt
 import pickle
+import os
 
 
 taus = [1, .2, .5, .8]
 TSvals =[True,  False]
+T = 10000
+
 
 
 for tau in taus:
@@ -21,7 +24,7 @@ for tau in taus:
 			algo_label = "HPLC-LUCB"
 
 
-		(timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T) = pickle.load(open("./linear_plots/data_linear_{}_{}.p".format(tau, algo_label), "rb"))
+		(timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T) = pickle.load(open("./linear_experiments/data/T{}/data_linear_{}_{}_{}.p".format(T, tau, algo_label, T), "rb"))
 
 		#IPython.embed()
 
@@ -45,7 +48,7 @@ for tau in taus:
 		plt.legend(loc="lower right", fontsize = 15)
 		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 		plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-		plt.savefig("./linear_plots/plots/Linear_Regret_{}_{}.png".format(tau, algo_label))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Regret_{}_{}_{}.png".format(T, tau, algo_label, T))
 		# ####################
 
 
@@ -63,7 +66,7 @@ for tau in taus:
 		plt.legend(loc="lower right", fontsize = 15)
 		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
-		plt.savefig("./linear_plots/plots/Linear_Cost_{}_{}.png".format(tau, algo_label))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Cost_{}_{}_{}.png".format(T, tau, algo_label, T))
 		# ####################
 		plt.figure(figsize=(5,5))
 
@@ -74,6 +77,6 @@ for tau in taus:
 		plt.legend(loc="lower right", fontsize = 15)
 		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
-		plt.savefig("./linear_plots/plots/Linear_Reward_{}_{}.png".format(tau, algo_label))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Reward_{}_{}_{}.png".format(T,tau, algo_label,  T))
 		# ####################
 		plt.close('all')
