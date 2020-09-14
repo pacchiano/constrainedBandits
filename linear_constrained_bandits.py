@@ -55,7 +55,7 @@ num_repetitions = 3
 #num_repetitions = 3
 
 T = 1000000
-d = 10
+d = 5
 theta = np.arange(d)
 theta = theta/np.max(theta)
 mu = np.flip(theta)
