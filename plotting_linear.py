@@ -28,6 +28,8 @@ for tau in taus:
 
 		#IPython.embed()
 
+		logging_frequency = int(T/len(timesteps))
+
 		font = {#'family' : 'normal',
 		        #'weight' : 'bold',
 		        'size'   : 16}
@@ -35,7 +37,7 @@ for tau in taus:
 		matplotlib.rc('font', **font)
 
 		#IPython.embed()
-		timesteps = np.arange(T) + 1
+		timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
 		#IPython.embed()
 		plt.figure(figsize=(5,5))
 
@@ -56,8 +58,8 @@ for tau in taus:
 		plt.figure(figsize=(5,5))
 
 		plt.title("Cost")
-		plt.plot(timesteps, [tau]*T, label = "Threshold", color = "black")
-		plt.plot(timesteps, [opt_cost]*T, label = "Opt Cost", color = "blue")
+		plt.plot(timesteps, [tau]*int(T/logging_frequency), label = "Threshold", color = "black")
+		plt.plot(timesteps, [opt_cost]*int(T/logging_frequency), label = "Opt Cost", color = "blue")
 		plt.plot(timesteps, mean_cost, label = algo_label, color = "red")
 		plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, color = "red", alpha = .1 )
 
@@ -71,7 +73,7 @@ for tau in taus:
 		plt.figure(figsize=(5,5))
 
 		plt.title("Reward")
-		plt.plot(timesteps, [opt_reward]*T, label = "Opt Reward", color = "blue")
+		plt.plot(timesteps, [opt_reward]*int(T/logging_frequency), label = "Opt Reward", color = "blue")
 		plt.plot(timesteps, mean_reward, label = algo_label, color = "red")
 		plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
 		plt.legend(loc="lower right", fontsize = 15)

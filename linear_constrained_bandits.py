@@ -51,7 +51,7 @@ def strided_method(ar):
 
 
 
-num_repetitions = 1
+num_repetitions = 3
 #num_repetitions = 3
 
 T = 1000000
@@ -64,6 +64,10 @@ A_0 = strided_method(np.arange(d))#np.eye(10)
 
 lam = .1
 nm_ini = 0
+logging_frequency = 100
+
+if int(T/logging_frequency)*logging_frequency < T:
+	raise ValueError("The logging frequency does not divide T.")
 
 
 path = os.getcwd()
@@ -90,10 +94,10 @@ for TS in [True, False]:
 
 
 
-		linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS) for _ in range(num_repetitions) ]
+		linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
 
 		linucb_regrets = ray.get(linucb_regrets)
-		#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
+		#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
 
 		opt_reward = linucb_regrets[0][3]
 		opt_cost = linucb_regrets[0][4]
@@ -101,7 +105,7 @@ for TS in [True, False]:
 
 
 		### REGRET
-		reg_summary = np.zeros((num_repetitions, T))
+		reg_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
 		for j in range(num_repetitions):
 				reg_summary[j, :] = linucb_regrets[j][0]
 
@@ -114,7 +118,7 @@ for TS in [True, False]:
 
 
 		### COST
-		cost_summary = np.zeros((num_repetitions, T))
+		cost_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
 		for j in range(num_repetitions):
 				cost_summary[j, :] = linucb_regrets[j][1]
 
@@ -124,13 +128,16 @@ for TS in [True, False]:
 
 
 		### REWARD
-		reward_summary = np.zeros((num_repetitions, T))
+		reward_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
 		for j in range(num_repetitions):
 				reward_summary[j, :] = linucb_regrets[j][2]
 
 		mean_reward = np.mean(reward_summary, axis = 0)
 		std_reward = np.std(reward_summary, axis = 0)
-		timesteps = np.arange(T) + 1
+		
+
+		timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
+
 
 		import pickle
 
@@ -169,8 +176,8 @@ for TS in [True, False]:
 		plt.figure(figsize=(5,5))
 
 		plt.title("Cost")
-		plt.plot(timesteps, [tau]*T, label = "Threshold", color = "black")
-		plt.plot(timesteps, [opt_cost]*T, label = "Opt Cost", color = "blue")
+		plt.plot(timesteps, [tau]*int(T/logging_frequency), label = "Threshold", color = "black")
+		plt.plot(timesteps, [opt_cost]*int(T/logging_frequency), label = "Opt Cost", color = "blue")
 		plt.plot(timesteps, mean_cost, label = algo_label, color = "red")
 
 		plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, color = "red", alpha = .1 )
@@ -186,7 +193,7 @@ for TS in [True, False]:
 		plt.figure(figsize=(5,5))
 
 		plt.title("Reward")
-		plt.plot(timesteps, [opt_reward]*T, label = "Opt Reward", color = "blue")
+		plt.plot(timesteps, [opt_reward]*int(T/logging_frequency), label = "Opt Reward", color = "blue")
 		plt.plot(timesteps, mean_reward, label = algo_label, color = "red")
 		plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
 		#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
