@@ -14,26 +14,31 @@ from utilities_linear import LinearBandit, LinUCB, LinTS
 
 
 ray.init()
-
 @ray.remote
-def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS = False):
+def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, 
+	TS = False, logging_frequency  = 1):
 	bandit = LinearBandit( theta, mu, tau, err_var, A_0 )
 
 	if TS:
-		solv = LinTS(bandit, lam, nm_ini, tau)
+		solv = LinTS(bandit, lam, nm_ini, tau, 
+			logging_frequency = logging_frequency)
 	else:
-		solv = LinUCB(bandit, lam, nm_ini, tau)
+		solv = LinUCB(bandit, lam, nm_ini, tau, 
+			logging_frequency = logging_frequency)
 
 	opt_reward = bandit.best_proba
 	opt_cost = bandit.best_cost
 	costs   = []
 	rewards = []
 
-	for i in range(T):
+	for t in range(T):
 		_, i, scaling, r, c = solv.run_one_step()
 		solv.update_regret(i, scaling)
-		costs.append(c)
-		rewards.append(r)
+		if t&100 ==0 :
+			print("Iteration {}".format(t))
+		if t%logging_frequency == 0:
+			costs.append(c)
+			rewards.append(r)
 
 	return solv.regrets, costs, rewards, opt_reward, opt_cost 
 
@@ -46,8 +51,10 @@ def strided_method(ar):
 
 
 
-num_repetitions = 3
-T = 100000
+num_repetitions = 1
+#num_repetitions = 3
+
+T = 1000000
 d = 10
 theta = np.arange(d)
 theta = theta/np.max(theta)
@@ -84,6 +91,7 @@ for TS in [True, False]:
 
 
 		linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS) for _ in range(num_repetitions) ]
+
 		linucb_regrets = ray.get(linucb_regrets)
 		#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini) for _ in range(num_repetitions) ]
 
@@ -126,7 +134,8 @@ for TS in [True, False]:
 
 		import pickle
 
-		pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, std_reward, tau, opt_cost, opt_reward, T), open("./linear_experiments/data/T{}/data_linear_{}_{}_{}.p".format(T,tau, algo_label, T), "wb"))
+		pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
+			std_reward, tau, opt_cost, opt_reward, T), open("./linear_experiments/data/T{}/data_linear_{}_{}_{}_{}.p".format(T,tau, algo_label, T, d), "wb"))
 
 
 
@@ -152,7 +161,7 @@ for TS in [True, False]:
 		#IPython.embed()
 		#plt.figure(figsize=(40,20))
 		plt.legend(loc="lower right",  fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Regret_{}_{}_{}.png".format(T,tau, algo_label, T))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Regret_{}_{}_{}_{}.png".format(T,tau, algo_label, T, d))
 		# ####################
 		#print("asldkfmaslkdfmasldkfmasldkmfalskdmfalskdmfalskdfm")
 
@@ -172,7 +181,7 @@ for TS in [True, False]:
 		#IPython.embed()
 		#plt.figure(figsize=(40,20))
 		plt.legend(loc="lower right", fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Cost_{}_{}_{}.png".format(T,tau, algo_label,T))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Cost_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
 		# ####################
 		plt.figure(figsize=(5,5))
 
@@ -184,7 +193,7 @@ for TS in [True, False]:
 		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
 		plt.legend(loc="lower right",  fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Reward_{}_{}_{}.png".format(T,tau, algo_label,T))
+		plt.savefig("./linear_experiments/plots/T{}/Linear_Reward_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
 		# ####################
 
 		plt.close('all')

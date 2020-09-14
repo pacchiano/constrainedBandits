@@ -70,7 +70,7 @@ class LinearBandit(ContextualBandit):
 
 
 class Solver(object):
-    def __init__(self, bandit):
+    def __init__(self, bandit, logging_frequency = 1):
         """
         bandit (Bandit): the target bandit to solve.
         """
@@ -83,12 +83,16 @@ class Solver(object):
         self.actions = []  # A list of machine ids, 0 to bandit.n-1.
         self.regret = 0.  # Cumulative regret.
         self.regrets = []  # History of cumulative regret.
+        self.logging_frequency = logging_frequency
+        self.counter = 0
 
     def update_regret(self, i, scaling):
         # i (int): index of the selected machine.
         instant_regret = self.bandit.best_proba - scaling*self.bandit.probas[i]
         self.regret += instant_regret
-        self.regrets.append(self.regret)
+        if self.counter%self.logging_frequency == 0:
+            self.regrets.append(self.regret)
+        self.counter += 1
         return instant_regret
 
     @property
@@ -103,12 +107,13 @@ class Solver(object):
 
 
 class LinUCB(Solver):
-    def __init__(self, bandit, lam, nm_ini, tau = 1):
+    def __init__(self, bandit, lam, nm_ini, tau = 1, 
+        compressed = True, logging_frequency = 1):
         """
 
         init_proba (float): default to be 0.0: pesimistic initialization.
         """
-        super(LinUCB, self).__init__(bandit)
+        super(LinUCB, self).__init__(bandit, logging_frequency = logging_frequency)
         ##### Check the bandit instance is a LinearBandit
         self.cost_upper_bound = 2*np.max(bandit.costs)
         self.d, self.K = bandit.context_shape
@@ -123,6 +128,11 @@ class LinUCB(Solver):
         self.estimates_cost = np.zeros(self.K)
         self.theta_hat = np.zeros(self.d)
         self.mu_hat = np.zeros(self.d)
+
+        self.compressed = compressed
+        self.X_Y = np.zeros(self.d)
+        self.X_C = np.zeros(self.d)
+
 
         self.V = self.lam *  np.identity(self.d)
         if self.lam > 0:
@@ -146,8 +156,16 @@ class LinUCB(Solver):
             delta = 1/(1+len(self.regrets))
             #IPython.embed()
 
-            self.theta_hat = self.V_inverse @ self.X_numpy.transpose() @ self.Y_numpy
-            self.mu_hat = self.V_inverse @ self.X_numpy.transpose() @ self.C_numpy
+            
+
+            if not self.compressed:
+                self.theta_hat = self.V_inverse @ self.X_numpy.transpose() @ self.Y_numpy
+                self.mu_hat = self.V_inverse @ self.X_numpy.transpose() @ self.C_numpy
+
+            else:
+                self.theta_hat = self.V_inverse @ self.X_Y
+                self.mu_hat = self.V_inverse @ self.X_C
+
 
 
             ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
@@ -189,9 +207,12 @@ class LinUCB(Solver):
 
 
     def update_X_and_V(self, context, i, scaling):
-        self.X.append(scaling*context[:, i])
-        #print(scaling)
-        self.X_numpy = np.array( self.X )
+
+        if not self.compressed:
+            self.X.append(scaling*context[:, i])
+            #print(scaling)
+            self.X_numpy = np.array( self.X )
+        
         self.V += np.outer(scaling*context[:, i], scaling*context[:,i])
 
         if len(self.regrets) <= self.nm_ini:
@@ -213,29 +234,37 @@ class LinUCB(Solver):
         context = self.bandit.generate_context()
         i, scaling = self.get_arm(context = context)
         
+
+
         self.update_X_and_V(context, i, scaling)
         r = self.bandit.generate_reward(i, scaling)
         r_real = self.bandit.generate_reward(i, scaling, real = True)
         c = self.bandit.generate_cost(i, scaling)
         c_real = self.bandit.generate_cost(i, scaling, real = True)
-        self.Y.append(r)
-        self.C.append(c)
-        self.Y_numpy = np.array(self.Y)
-        self.C_numpy = np.array(self.C)
+
+        if not self.compressed:
+            self.Y.append(r)
+            self.C.append(c)
+            self.Y_numpy = np.array(self.Y)
+            self.C_numpy = np.array(self.C)
         #self.estimates[i] += 1. / (self.counts[i] + 1) * (r - self.estimates[i])
         #self.estimates[i] = (self.counts[i]*self.estimates[i] + r)/(self.counts[i] + 1.)
+
+        self.X_Y += scaling*context[:, i]*r
+        self.X_C += scaling*context[:, i]*c
         self.counts[i] += 1
 
         return context,i, scaling, r_real, c_real
 
 
 class LinTS(Solver):
-    def __init__(self, bandit, lam, nm_ini, tau = 1):
+    def __init__(self, bandit, lam, nm_ini, tau = 1, 
+        compressed = True, logging_frequency = 1):
         """
 
         init_proba (float): default to be 0.0: pesimistic initialization.
         """
-        super(LinTS, self).__init__(bandit)
+        super(LinTS, self).__init__(bandit, logging_frequency = logging_frequency)
         ##### Check the bandit instance is a LinearBandit
         self.cost_upper_bound = 2*np.max(bandit.costs)
         self.d, self.K = bandit.context_shape
@@ -250,6 +279,11 @@ class LinTS(Solver):
         self.estimates_cost = np.zeros(self.K)
         self.theta_hat = np.zeros(self.d)
         self.mu_hat = np.zeros(self.d)
+        self.X_Y = np.zeros(self.d)
+        self.X_C = np.zeros(self.d)
+
+        self.compressed = compressed
+
 
         self.V = self.lam *  np.identity(self.d)
         if self.lam > 0:
@@ -273,9 +307,13 @@ class LinTS(Solver):
             delta = 1/(1+len(self.regrets))
             #IPython.embed()
 
-            self.theta_hat = self.V_inverse @ self.X_numpy.transpose() @ self.Y_numpy
-            self.mu_hat = self.V_inverse @ self.X_numpy.transpose() @ self.C_numpy
-
+            #if not self.sgd:
+            if not self.compressed:
+                self.theta_hat = self.V_inverse @ self.X_numpy.transpose() @ self.Y_numpy
+                self.mu_hat = self.V_inverse @ self.X_numpy.transpose() @ self.C_numpy
+            else:
+                self.theta_hat = self.V_inverse @ self.X_Y
+                self.mu_hat = self.V_inverse @ self.X_C
 
             ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
 
@@ -321,9 +359,13 @@ class LinTS(Solver):
 
 
     def update_X_and_V(self, context, i, scaling):
-        self.X.append(scaling*context[:, i])
-        #print(scaling)
-        self.X_numpy = np.array( self.X )
+        
+        #if not self.sgd:
+        if not self.compressed:
+            self.X.append(scaling*context[:, i])
+            self.X_numpy = np.array( self.X )
+
+
         self.V += np.outer(scaling*context[:, i], scaling*context[:,i])
 
         if len(self.regrets) <= self.nm_ini:
@@ -350,13 +392,22 @@ class LinTS(Solver):
         r_real = self.bandit.generate_reward(i, scaling, real = True)
         c = self.bandit.generate_cost(i, scaling)
         c_real = self.bandit.generate_cost(i, scaling, real = True)
-        self.Y.append(r)
-        self.C.append(c)
-        self.Y_numpy = np.array(self.Y)
-        self.C_numpy = np.array(self.C)
+        
+        #if not self.sgd:
+
+        if not self.compressed:
+            self.Y.append(r)
+            self.C.append(c)
+            self.Y_numpy = np.array(self.Y)
+            self.C_numpy = np.array(self.C)
+
+        self.X_Y += scaling*context[:, i]*r
+        self.X_C += scaling*context[:, i]*c
+
         #self.estimates[i] += 1. / (self.counts[i] + 1) * (r - self.estimates[i])
         #self.estimates[i] = (self.counts[i]*self.estimates[i] + r)/(self.counts[i] + 1.)
         self.counts[i] += 1
+
 
         return context,i, scaling, r_real, c_real
 
