@@ -155,6 +155,8 @@ class LinUCB(Solver):
 
             delta = 1/(1+len(self.regrets))
             #IPython.embed()
+            #delta = 1.0/100
+
 
             
 
@@ -168,7 +170,7 @@ class LinUCB(Solver):
 
 
 
-            ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
+            ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.mu)
 
             UCB_cost = np.zeros(self.K)
             self.estimates_cost = np.matmul(np.squeeze(self.mu_hat), context )
@@ -180,7 +182,7 @@ class LinUCB(Solver):
 
             
             #ft = self.bandit.err_var * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
-            ft_reward = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
+            ft_reward = 1.0/(min(1, self.bandit.tau))*2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
 
             UCB_reward = np.zeros(self.K)
             self.estimates_reward = np.matmul(np.squeeze(self.theta_hat), context )
@@ -305,6 +307,10 @@ class LinTS(Solver):
         elif len(self.regrets) >= self.nm_ini +1:
 
             delta = 1/(1+len(self.regrets))
+
+
+            #delta = 1.0/100
+
             #IPython.embed()
 
             #if not self.sgd:
@@ -315,7 +321,7 @@ class LinTS(Solver):
                 self.theta_hat = self.V_inverse @ self.X_Y
                 self.mu_hat = self.V_inverse @ self.X_C
 
-            ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
+            ft_cost = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.mu)
 
             UCB_cost = np.zeros(self.K)
             self.estimates_cost = np.matmul(np.squeeze(self.mu_hat), context )
@@ -327,13 +333,15 @@ class LinTS(Solver):
 
             
             #ft = self.bandit.err_var * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
-            ft_reward = 2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
+            ft_reward = 1.0/(min(1, self.bandit.tau))*2.0 * (2 * np.log((np.linalg.det(self.V) ** 0.5) * (np.linalg.det(self.lam * np.identity(self.d)) ** -0.5) /delta)) ** 0.5 + self.lam ** 0.5 * np.linalg.norm(self.bandit.theta)
 
             UCB_reward = np.zeros(self.K)
             #print("MU hat shape ", self.mu_hat.shape)
-            #theta_tilde = np.random.multivariate_normal(self.theta_hat.reshape((self.d, )),self.d*(ft_reward**2)*self.V_inverse, 1).reshape((self.d,))
+
+
+            theta_tilde = np.random.multivariate_normal(self.theta_hat.reshape((self.d, )),self.d*(ft_reward**2)*self.V_inverse, 1).reshape((self.d,))
             #theta_tilde = self.theta_hat
-            theta_tilde = np.random.multivariate_normal(self.theta_hat.reshape((self.d, )),.1*self.V_inverse, 1).reshape((self.d,))
+            #theta_tilde = np.random.multivariate_normal(self.theta_hat.reshape((self.d, )),.1*self.V_inverse, 1).reshape((self.d,))
 
             self.estimates_reward = np.matmul(np.squeeze(theta_tilde), context )
             for k in range(self.K):
