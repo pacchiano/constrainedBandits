@@ -54,14 +54,14 @@ def strided_method(ar):
 num_repetitions = 10
 #num_repetitions = 3
 
-T = 1000000
+T = 10000000
 
 err_var = 1
 
 #lam = .1
 lam = .1
 nm_ini = 0
-logging_frequency = 100
+logging_frequency = 1000
 
 if int(T/logging_frequency)*logging_frequency < T:
 	raise ValueError("The logging frequency does not divide T.")
