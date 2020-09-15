@@ -34,7 +34,7 @@ def run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini,
 	for t in range(T):
 		_, i, scaling, r, c = solv.run_one_step()
 		solv.update_regret(i, scaling)
-		if t&100 ==0 :
+		if t%10000 ==0 :
 			print("Iteration {}".format(t))
 		if t%logging_frequency == 0:
 			costs.append(c)
@@ -51,10 +51,10 @@ def strided_method(ar):
 
 
 
-num_repetitions = 3
+num_repetitions = 10
 #num_repetitions = 3
 
-T = 100000
+T = 1000000
 d = 5
 theta = np.arange(d)
 theta = theta/np.linalg.norm(theta)
@@ -91,7 +91,7 @@ for TS in [True, False]:
 	else:
 		algo_label = "HPLC-LUCB"
 
-	for tau in [.2,.5,.8,1 , 1000]:
+	for tau in [.2,.5,.8,1 ]:
 
 
 
