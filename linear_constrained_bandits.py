@@ -55,13 +55,8 @@ num_repetitions = 10
 #num_repetitions = 3
 
 T = 1000000
-d = 5
-theta = np.arange(d)
-theta = theta/np.linalg.norm(theta)
-mu = np.flip(theta)
 
 err_var = 1
-A_0 = strided_method(np.arange(d))/np.linalg.norm(np.arange(d))#np.eye(10)
 
 #lam = .1
 lam = .1
@@ -83,127 +78,132 @@ if not os.path.isdir("{}/linear_experiments/data/T{}".format(path,T)):
 		print ("Successfully created the directory ")
 
 
+for d in [5, 10]:
+
+	theta = np.arange(d)
+	theta = theta/np.linalg.norm(theta)
+	mu = np.flip(theta)
+	A_0 = strided_method(np.arange(d))/np.linalg.norm(np.arange(d))#np.eye(10)
+
+	for TS in [True, False]:
+
+		if TS:
+			algo_label = "Safe-LTS"
+		else:
+			algo_label = "HPLC-LUCB"
+
+		for tau in [.2,.5,.8,.6, 1]:
 
 
-for TS in [True, False]:
+			linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
 
-	if TS:
-		algo_label = "Safe-LTS"
-	else:
-		algo_label = "HPLC-LUCB"
+			linucb_regrets = ray.get(linucb_regrets)
+			#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
 
-	for tau in [.2,.5,.8,.6, 1]:
-
-
-		linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
-
-		linucb_regrets = ray.get(linucb_regrets)
-		#linucb_regrets = [run_linucb_sweep_experiment(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
-
-		opt_reward = linucb_regrets[0][3]
-		opt_cost = linucb_regrets[0][4]
-
-
-
-		### REGRET
-		reg_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-		for j in range(num_repetitions):
-				reg_summary[j, :] = linucb_regrets[j][0]
-
-
-		#print([np.sum(reg) for reg in ray.get(cor_regrets) ])
-		mean_regret = np.mean(reg_summary, axis = 0)
-		std_regret = np.std(reg_summary, axis = 0)
+			opt_reward = linucb_regrets[0][3]
+			opt_cost = linucb_regrets[0][4]
 
 
 
-
-		### COST
-		cost_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-		for j in range(num_repetitions):
-				cost_summary[j, :] = linucb_regrets[j][1]
-
-		#print([np.sum(reg) for reg in ray.get(cor_regrets) ])
-		mean_cost = np.mean(cost_summary, axis = 0)
-		std_cost = np.std(cost_summary, axis = 0)
+			### REGRET
+			reg_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
+			for j in range(num_repetitions):
+					reg_summary[j, :] = linucb_regrets[j][0]
 
 
-		### REWARD
-		reward_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-		for j in range(num_repetitions):
-				reward_summary[j, :] = linucb_regrets[j][2]
-
-		mean_reward = np.mean(reward_summary, axis = 0)
-		std_reward = np.std(reward_summary, axis = 0)
-		
-
-		timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
-
-
-		import pickle
-
-		pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
-			std_reward, tau, opt_cost, opt_reward, T), open("./linear_experiments/data/T{}/data_linear_{}_{}_{}_{}.p".format(T,tau, algo_label, T, d), "wb"))
+			#print([np.sum(reg) for reg in ray.get(cor_regrets) ])
+			mean_regret = np.mean(reg_summary, axis = 0)
+			std_regret = np.std(reg_summary, axis = 0)
 
 
 
 
-		font = {#'family' : 'normal',
-		        #'weight' : 'bold',
-		        'size'   : 16}
-		matplotlib.rc('font', **font)
+			### COST
+			cost_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
+			for j in range(num_repetitions):
+					cost_summary[j, :] = linucb_regrets[j][1]
+
+			#print([np.sum(reg) for reg in ray.get(cor_regrets) ])
+			mean_cost = np.mean(cost_summary, axis = 0)
+			std_cost = np.std(cost_summary, axis = 0)
 
 
-		#print("alskdmfalskdmfalskdfmaslkdmfalsdkmfalskdfm ")
-		#IPython.embed()
-		#IPython.embed()
-		plt.figure(figsize=(5,5))
+			### REWARD
+			reward_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
+			for j in range(num_repetitions):
+					reward_summary[j, :] = linucb_regrets[j][2]
 
-		plt.title("Regret")
-		plt.plot(timesteps, mean_regret, label = algo_label, color = "red")
-		plt.fill_between(timesteps, mean_regret - .5*std_regret, mean_regret + .5*std_regret, color = "red", alpha = .1 )
-		#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-		plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+			mean_reward = np.mean(reward_summary, axis = 0)
+			std_reward = np.std(reward_summary, axis = 0)
+			
 
-		#IPython.embed()
-		#plt.figure(figsize=(40,20))
-		plt.legend(loc="lower right",  fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Regret_{}_{}_{}_{}.png".format(T,tau, algo_label, T, d))
-		# ####################
-		#print("asldkfmaslkdfmasldkfmasldkmfalskdmfalskdmfalskdfm")
+			timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
 
 
-		plt.figure(figsize=(5,5))
+			import pickle
 
-		plt.title("Cost")
-		plt.plot(timesteps, [tau]*int(T/logging_frequency), label = "Threshold", color = "black")
-		plt.plot(timesteps, [opt_cost]*int(T/logging_frequency), label = "Opt Cost", color = "blue")
-		plt.plot(timesteps, mean_cost, label = algo_label, color = "red")
-
-		plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, color = "red", alpha = .1 )
-		#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+			pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
+				std_reward, tau, opt_cost, opt_reward, T), open("./linear_experiments/data/T{}/data_linear_{}_{}_{}_{}.p".format(T,tau, algo_label, T, d), "wb"))
 
 
-		#IPython.embed()
-		#plt.figure(figsize=(40,20))
-		plt.legend(loc="lower right", fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Cost_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
-		# ####################
-		plt.figure(figsize=(5,5))
 
-		plt.title("Reward")
-		plt.plot(timesteps, [opt_reward]*int(T/logging_frequency), label = "Opt Reward", color = "blue")
-		plt.plot(timesteps, mean_reward, label = algo_label, color = "red")
-		plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
-		#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
-		plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
 
-		plt.legend(loc="lower right",  fontsize = 15)
-		plt.savefig("./linear_experiments/plots/T{}/Linear_Reward_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
-		# ####################
+			font = {#'family' : 'normal',
+			        #'weight' : 'bold',
+			        'size'   : 16}
+			matplotlib.rc('font', **font)
 
-		plt.close('all')
+
+			#print("alskdmfalskdmfalskdfmaslkdmfalsdkmfalskdfm ")
+			#IPython.embed()
+			#IPython.embed()
+			plt.figure(figsize=(5,5))
+
+			plt.title("Regret")
+			plt.plot(timesteps, mean_regret, label = algo_label, color = "red")
+			plt.fill_between(timesteps, mean_regret - .5*std_regret, mean_regret + .5*std_regret, color = "red", alpha = .1 )
+			#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+			plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+			plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+
+			#IPython.embed()
+			#plt.figure(figsize=(40,20))
+			plt.legend(loc="lower right",  fontsize = 15)
+			plt.savefig("./linear_experiments/plots/T{}/Linear_Regret_{}_{}_{}_{}.png".format(T,tau, algo_label, T, d))
+			# ####################
+			#print("asldkfmaslkdfmasldkfmasldkmfalskdmfalskdmfalskdfm")
+
+
+			plt.figure(figsize=(5,5))
+
+			plt.title("Cost")
+			plt.plot(timesteps, [tau]*int(T/logging_frequency), label = "Threshold", color = "black")
+			plt.plot(timesteps, [opt_cost]*int(T/logging_frequency), label = "Opt Cost", color = "blue")
+			plt.plot(timesteps, mean_cost, label = algo_label, color = "red")
+
+			plt.fill_between(timesteps, mean_cost - .5*std_cost, mean_cost + .5*std_cost, color = "red", alpha = .1 )
+			#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+			plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+
+
+			#IPython.embed()
+			#plt.figure(figsize=(40,20))
+			plt.legend(loc="lower right", fontsize = 15)
+			plt.savefig("./linear_experiments/plots/T{}/Linear_Cost_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
+			# ####################
+			plt.figure(figsize=(5,5))
+
+			plt.title("Reward")
+			plt.plot(timesteps, [opt_reward]*int(T/logging_frequency), label = "Opt Reward", color = "blue")
+			plt.plot(timesteps, mean_reward, label = algo_label, color = "red")
+			plt.fill_between(timesteps, mean_reward - .5*std_reward, mean_reward + .5*std_reward, color = "red", alpha = .1 )
+			#plt.axes().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+			plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+
+			plt.legend(loc="lower right",  fontsize = 15)
+			plt.savefig("./linear_experiments/plots/T{}/Linear_Reward_{}_{}_{}_{}.png".format(T,tau, algo_label,T, d))
+			# ####################
+
+			plt.close('all')
 
 
