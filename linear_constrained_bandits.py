@@ -60,9 +60,10 @@ theta = np.arange(d)
 theta = theta/np.linalg.norm(theta)
 mu = np.flip(theta)
 
-err_var = .1
+err_var = 1
 A_0 = strided_method(np.arange(d))/np.linalg.norm(np.arange(d))#np.eye(10)
 
+#lam = .1
 lam = .1
 nm_ini = 0
 logging_frequency = 100
@@ -91,8 +92,7 @@ for TS in [True, False]:
 	else:
 		algo_label = "HPLC-LUCB"
 
-	for tau in [.2,.5,.8,1 ]:
-
+	for tau in [.2,.5,.8,.6, 1]:
 
 
 		linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
