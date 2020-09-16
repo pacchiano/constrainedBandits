@@ -64,7 +64,7 @@ def strided_method(ar):
 
 
 T = 1000000
-d = 5
+d = 10
 num_experiments = 10
 err_var = .1
 lam = .1
