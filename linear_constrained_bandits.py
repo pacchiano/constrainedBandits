@@ -85,14 +85,14 @@ for d in [5, 10]:
 	mu = np.flip(theta)
 	A_0 = strided_method(np.arange(d))/np.linalg.norm(np.arange(d))#np.eye(10)
 
-	for TS in [True, False]:
+	for TS in [ False]:
 
 		if TS:
 			algo_label = "Safe-LTS"
 		else:
 			algo_label = "HPLC-LUCB"
 
-		for tau in [ 1]:
+		for tau in [ .2, .6, .8, .5]:
 
 
 			linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
