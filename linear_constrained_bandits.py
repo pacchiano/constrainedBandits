@@ -78,14 +78,14 @@ if not os.path.isdir("{}/linear_experiments/data/T{}".format(path,T)):
 		print ("Successfully created the directory ")
 
 
-for d in [5, 10]:
+for d in [10]:
 
 	theta = np.arange(d)
 	theta = theta/np.linalg.norm(theta)
 	mu = np.flip(theta)
 	A_0 = strided_method(np.arange(d))/np.linalg.norm(np.arange(d))#np.eye(10)
 
-	for TS in [ False]:
+	for TS in [ True]:
 
 		if TS:
 			algo_label = "Safe-LTS"
