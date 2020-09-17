@@ -92,7 +92,7 @@ for d in [10]:
 		else:
 			algo_label = "HPLC-LUCB"
 
-		for tau in [ .5, .8, .6]:
+		for tau in [ .8]:
 
 
 			linucb_regrets = [run_linucb_sweep_experiment.remote(T, theta, mu, tau, err_var, A_0, lam, nm_ini, TS, logging_frequency) for _ in range(num_repetitions) ]
