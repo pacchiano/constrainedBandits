@@ -94,8 +94,9 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 T = 1000000
 #T = 100
 num_repetitions = 10
-threshold = .5
-logging_frequency = 100
+
+thresholds = [.2, .5, .6, .8]
+logging_frequency = 10
 
 
 path = os.getcwd()
@@ -121,85 +122,89 @@ banditenv = DoubleMultiArm(reward_gaussian_arms, cost_gaussian_arms)
 
 num_arms = len(reward_gaussian_means)
 
-opt_policy = banditenv.get_optimal_policy(threshold)
-opt_policy_means = banditenv.evaluate_policy(opt_policy)
-###################################################
 
 
-opt_reward = opt_policy_means[0]
-opt_cost = opt_policy_means[1]
+for threshold in thresholds:
 
-opt_rewards = [opt_policy_means[0]]*int(T/logging_frequency)
-opt_costs =[opt_policy_means[1]]*int(T/logging_frequency)
-threshold_cost = [threshold]*int(T/logging_frequency)
-
-# print("Opt policy ", opt_policy)
-# print("opt policy means ", opt_policy_means)
-# print("true reward means ", reward_gaussian_means)
-# print("true costs means ", cost_gaussian_means)
+	opt_policy = banditenv.get_optimal_policy(threshold)
+	opt_policy_means = banditenv.evaluate_policy(opt_policy)
+	###################################################
 
 
+	opt_reward = opt_policy_means[0]
+	opt_cost = opt_policy_means[1]
 
-rewards_costs = [run_constrained_bandits.remote(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold) for _ in range(num_repetitions)]
-rewards_costs = ray.get(rewards_costs)
+	opt_rewards = [opt_policy_means[0]]*int(T/logging_frequency)
+	opt_costs =[opt_policy_means[1]]*int(T/logging_frequency)
+	threshold_cost = [threshold]*int(T/logging_frequency)
 
-#rewards_costs = [run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold) for _ in range(num_repetitions)]
-
-
-# print(rewards_costs)
-
-mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, opt_rewards[0], T, logging_frequency)
-
-
-# print("Inst regret ", mean_regret)
-# print("Reward ", mean_reward)
-
-
-timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
+	# print("Opt policy ", opt_policy)
+	# print("opt policy means ", opt_policy_means)
+	# print("true reward means ", reward_gaussian_means)
+	# print("true costs means ", cost_gaussian_means)
 
 
 
+	rewards_costs = [run_constrained_bandits.remote(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold) for _ in range(num_repetitions)]
+	rewards_costs = ray.get(rewards_costs)
 
-# print("opt rewards ", opt_rewards[0])
-
-
-font = {#'family' : 'normal',
-        #'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-
-plt.figure(figsize=(5,5))
-# plt.subplot(1, 2, 1)
-plt.title("Rewards Evolution")
-plt.plot(timesteps, mean_reward, label = "Rewards", linewidth = 3.5, color = "blue")
-plt.fill_between(timesteps, mean_reward - .2*std_reward, mean_reward  + .2*std_reward, color = "blue", alpha = .1)
-plt.plot(timesteps, opt_rewards, label = "Opt rewards", linewidth = 3.5, color = "red")
-plt.legend(loc = "lower right", fontsize = 15)
-# plt.subplot(1, 2, 2)
-plt.savefig("./mab/plots/T{}/rewards_evolution_tau_{}_{}.png".format(T,threshold, T))
-
-plt.figure(figsize=(5,5))
-plt.title("Cost Evolution")
-plt.plot(timesteps, mean_cost,  label = "Costs", linewidth = 3.5, color = "blue")
-plt.fill_between(timesteps, mean_cost - .2*std_cost, mean_cost + .2*std_cost, color = "blue", alpha = .1)
-plt.plot(timesteps, opt_costs,  label = "Optimal cost", linewidth = 3.5, color = "red")
-plt.plot(timesteps, threshold_cost,  label = "Threshold cost", linewidth = 3.5, color = "black")
-plt.legend(loc = "lower right", fontsize = 15)
-plt.savefig("./mab/plots/T{}/cost_evolution_tau_{}_{}.png".format(T,threshold, T))
+	#rewards_costs = [run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold) for _ in range(num_repetitions)]
 
 
-plt.figure(figsize=(5,5))
-plt.title("Regret")
-plt.plot(timesteps, mean_regret, linewidth = 3.5, color = "black")
-plt.fill_between(timesteps, mean_regret - .2*std_regret, mean_regret + .2*std_regret, color = "blue", alpha = .1)
-plt.legend(loc="upper left")
-#plt.title("Constrained Bandits")
-plt.savefig("./mab/plots/T{}/constrained_regrets_tau_{}_{}.png".format(T,threshold,T))
+	# print(rewards_costs)
+
+	mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, opt_rewards[0], T, logging_frequency)
+
+
+	# print("Inst regret ", mean_regret)
+	# print("Reward ", mean_reward)
+
+
+	timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
 
 
 
-import pickle
 
-pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
-	std_reward, threshold, opt_cost, opt_reward, T ), open("./mab/data/T{}/data_mab_{}_{}.p".format(T, threshold, T), "wb"))
+	# print("opt rewards ", opt_rewards[0])
+
+
+	font = {#'family' : 'normal',
+	        #'weight' : 'bold',
+	        'size'   : 16}
+
+	matplotlib.rc('font', **font)
+
+	plt.figure(figsize=(5,5))
+	# plt.subplot(1, 2, 1)
+	plt.title("Rewards Evolution")
+	plt.plot(timesteps, mean_reward, label = "Rewards", linewidth = 3.5, color = "blue")
+	plt.fill_between(timesteps, mean_reward - .2*std_reward, mean_reward  + .2*std_reward, color = "blue", alpha = .1)
+	plt.plot(timesteps, opt_rewards, label = "Opt rewards", linewidth = 3.5, color = "red")
+	plt.legend(loc = "lower right", fontsize = 15)
+	# plt.subplot(1, 2, 2)
+	plt.savefig("./mab/plots/T{}/rewards_evolution_tau_{}_{}.png".format(T,threshold, T))
+
+	plt.figure(figsize=(5,5))
+	plt.title("Cost Evolution")
+	plt.plot(timesteps, mean_cost,  label = "Costs", linewidth = 3.5, color = "blue")
+	plt.fill_between(timesteps, mean_cost - .2*std_cost, mean_cost + .2*std_cost, color = "blue", alpha = .1)
+	plt.plot(timesteps, opt_costs,  label = "Optimal cost", linewidth = 3.5, color = "red")
+	plt.plot(timesteps, threshold_cost,  label = "Threshold cost", linewidth = 3.5, color = "black")
+	plt.legend(loc = "lower right", fontsize = 15)
+	plt.savefig("./mab/plots/T{}/cost_evolution_tau_{}_{}.png".format(T,threshold, T))
+
+
+	plt.figure(figsize=(5,5))
+	plt.title("Regret")
+	plt.plot(timesteps, mean_regret, linewidth = 3.5, color = "black")
+	plt.fill_between(timesteps, mean_regret - .2*std_regret, mean_regret + .2*std_regret, color = "blue", alpha = .1)
+	plt.legend(loc="upper left")
+	#plt.title("Constrained Bandits")
+	plt.savefig("./mab/plots/T{}/constrained_regrets_tau_{}_{}.png".format(T,threshold,T))
+
+	plt.close("all")
+
+	import pickle
+
+	pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
+		std_reward, threshold, opt_cost, opt_reward, T ), open("./mab/data/T{}/data_mab_{}_{}.p".format(T, threshold, T), "wb"))
