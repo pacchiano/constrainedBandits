@@ -73,7 +73,7 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 		local_costs.append(our_policy_means[1])
 
 		if t%logging_frequency == 0:
-		  print("iteration {}".format(t))
+		  print("iteration {} - threshold {}".format(t, threshold))
 		  rewards.append(np.mean(local_rewards))
 		  costs.append(np.mean(local_costs))
 		  local_rewards = []
