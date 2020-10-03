@@ -29,11 +29,18 @@ from utilities import *
 
 ray.init()
 @ray.remote
-def run_random_mab_sweep_experiment(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold, do_UCB = False):
+def run_random_mab_sweep_experiment(T, num_arms, do_UCB = False, logging_frequency = 1):
 
 
 
+	reward_gaussian_means = np.random.random(num_arms)
+	cost_gaussian_means = np.random.random(num_arms)
+	threshold = np.min(cost_gaussian_means) + (np.max(cost_gaussian_means) - np.min(cost_gaussian_means))*np.random.random()
 
+
+	known_arms_indicator =  np.zeros(num_arms)
+	known_arms_indicator[np.argmin(cost_gaussian_means)] = 1
+	
 
 
 	#reward_gaussian_means = [.1, .2, .4, .7]
@@ -70,8 +77,11 @@ def run_random_mab_sweep_experiment(T, reward_gaussian_means, cost_gaussian_mean
 
 	  index = banditalg.get_arm_index()
 	  our_policy_means = banditenv.evaluate_policy(policy)
-	  rewards.append(our_policy_means[0])
-	  costs.append(our_policy_means[1])
+
+	  if t%logging_frequency == 0:
+		  rewards.append(our_policy_means[0])
+		  costs.append(our_policy_means[1])
+	  
 	  if our_policy_means[1] > threshold:
 	  	raise ValueError("Our policy means {}, threshold {} our policy {} upper cost mean {} upper reward mean {}".format(our_policy_means[1], threshold, policy, banditalg.upper_cost_means, banditalg.upper_rewards_means))
 
@@ -85,47 +95,31 @@ def run_random_mab_sweep_experiment(T, reward_gaussian_means, cost_gaussian_mean
 
 
 
-	
+T = 1000000
+num_arms = 10
+num_experiments = 10
+logging_frequency = 100
+
+if int(T/logging_frequency)*logging_frequency < T:
+	raise ValueError("The logging frequency does not divide T.")
 
 
-
-
-ray.init()
-@ray.remote
-def run_random_linucb_sweep_experiment(T, d, err_var, lam, nm_ini, 
-	TS = False, logging_frequency  = 1, num_arms = 100):
-	
-	theta = np.random.normal(0, 1, d)
-	theta = theta/np.linalg.norm(theta)
-	mu = np.random.normal(0, 1, d)
-	mu = mu/np.linalg.norm(mu)
-	tau =  np.random.random()
-
-	A_0 = np.random.normal(0, 1, (d, num_arms))#np.eye(10)
-	for i in range(num_arms):
-		A_0[:,i] = A_0[:,i]/np.linalg.norm(A_0[:,i]) 
-
-	bandit = LinearBandit( theta, mu, tau, err_var, A_0 )
-
-	if TS:
-		solv = LinTS(bandit, lam, nm_ini, tau, 
-			logging_frequency = logging_frequency)
+path = os.getcwd()
+if not os.path.isdir("{}/linear_experiments/data/RandomT{}".format(path,T)):
+	try:
+		os.mkdir("{}/linear_experiments/data/RandomT{}".format(path,T))
+		os.mkdir("{}/linear_experiments/plots/RandomT{}".format(path,T))
+	except OSError:
+		print ("Creation of the directories failed")
 	else:
-		solv = LinUCB(bandit, lam, nm_ini, tau, 
-			logging_frequency = logging_frequency)
+		print ("Successfully created the directory ")
 
-	#opt_reward = bandit.best_proba
-	#opt_cost = bandit.best_cost
-	costs   = []
-	rewards = []
 
-	for t in range(T):
-		_, i, scaling, r, c = solv.run_one_step()
-		solv.update_regret(i, scaling)
-		if t&100 ==0 :
-			print("Iteration {}".format(t))
-		if t%logging_frequency == 0:
-			costs.append(c)
-			rewards.append(r)
 
-	return solv.regrets, costs, rewards#, opt_reward, opt_cost 
+
+
+
+
+
+	
+

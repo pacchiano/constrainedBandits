@@ -59,26 +59,35 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 
 	eps = 0.000001
 	banditalg = ConstrainedBandit( initial_rewards_means, initial_cost_means, threshold, T, known_arms_indicator = known_arms_indicator, alpha_r = alpha_r, alpha_c = alpha_c, do_UCB = do_UCB)
+	local_rewards = []
+	local_costs = []
+
 	for t in range(T):
-	  policy = banditalg.get_policy()
-	  if np.abs(sum(policy) -1) > eps:
-	    raise ValueError("Policy didn't sum to 1. It summed to {} instead.".format(sum(policy)))
+		policy = banditalg.get_policy()
+		if np.abs(sum(policy) -1) > eps:
+			raise ValueError("Policy didn't sum to 1. It summed to {} instead.".format(sum(policy)))
+		index = banditalg.get_arm_index()
+		our_policy_means = banditenv.evaluate_policy(policy)
+		local_rewards.append(our_policy_means[0])
+		local_costs.append(our_policy_means[1])
 
-	  index = banditalg.get_arm_index()
-	  our_policy_means = banditenv.evaluate_policy(policy)
-	  rewards.append(our_policy_means[0])
-	  costs.append(our_policy_means[1])
-	  if our_policy_means[1] > threshold:
-	  	raise ValueError("Our policy means {}, threshold {} our policy {} upper cost mean {} upper reward mean {}".format(our_policy_means[1], threshold, policy, banditalg.upper_cost_means, banditalg.upper_rewards_means))
+		if t%logging_frequency == 0:
+		  rewards.append(np.mean(local_rewards))
+		  costs.append(np.mean(local_costs))
+		  local_rewards = []
+		  local_costs = []
+
+		if our_policy_means[1] > threshold:
+			raise ValueError("Our policy means {}, threshold {} our policy {} upper cost mean {} upper reward mean {}".format(our_policy_means[1], threshold, policy, banditalg.upper_cost_means, banditalg.upper_rewards_means))
 
 
-	  (r, f) = banditenv.get_rewards(index) 
-	  banditalg.update(index, r, f)
+		(r, f) = banditenv.get_rewards(index) 
+		banditalg.update(index, r, f)
 
 	return costs, rewards
 
 
-def get_summary(rewards_costs, num_repetitions, opt_reward, T):
+def get_summary(rewards_costs, num_repetitions, opt_reward, T, logging_frequency):
 	rewards = []
 	costs = []
 	regrets = []
@@ -87,9 +96,9 @@ def get_summary(rewards_costs, num_repetitions, opt_reward, T):
 		rewards.append(rewards_costs[i][1])
 		regrets.append(np.cumsum(opt_reward - rewards_costs[i][1]))
 
-	reg_summary = np.zeros((num_repetitions, T))
-	cost_summary = np.zeros((num_repetitions, T))
-	regret_summary = np.zeros((num_repetitions, T))
+	reg_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
+	cost_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
+	regret_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
 	for i in range(num_repetitions):
 		cost_summary[i, :] = costs[i]
 		reg_summary[i, :] = rewards[i]
@@ -113,7 +122,8 @@ def get_summary(rewards_costs, num_repetitions, opt_reward, T):
 T = 1000
 #T = 100
 num_repetitions = 10
-
+threshold = .5
+logging_frequency = 10
 
 
 path = os.getcwd()
@@ -137,7 +147,6 @@ reward_gaussian_arms = [SimpleGaussianArm(mean, .1, truncated = True) for mean i
 cost_gaussian_arms = [SimpleGaussianArm(mean, .1, truncated = True) for mean in cost_gaussian_means]
 banditenv = DoubleMultiArm(reward_gaussian_arms, cost_gaussian_arms)
 
-threshold = .5
 num_arms = len(reward_gaussian_means)
 
 opt_policy = banditenv.get_optimal_policy(threshold)
@@ -148,9 +157,9 @@ opt_policy_means = banditenv.evaluate_policy(opt_policy)
 opt_reward = opt_policy_means[0]
 opt_cost = opt_policy_means[1]
 
-opt_rewards = [opt_policy_means[0]]*T
-opt_costs =[opt_policy_means[1]]*T
-threshold_cost = [threshold]*T
+opt_rewards = [opt_policy_means[0]]*int(T/logging_frequency)
+opt_costs =[opt_policy_means[1]]*int(T/logging_frequency)
+threshold_cost = [threshold]*int(T/logging_frequency)
 
 # print("Opt policy ", opt_policy)
 # print("opt policy means ", opt_policy_means)
@@ -167,13 +176,17 @@ rewards_costs = ray.get(rewards_costs)
 
 # print(rewards_costs)
 
-mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, opt_rewards[0], T)
+mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, opt_rewards[0], T, logging_frequency)
 
 
 # print("Inst regret ", mean_regret)
 # print("Reward ", mean_reward)
 
-timesteps = np.arange(T) + 1
+
+timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
+
+
+
 
 # print("opt rewards ", opt_rewards[0])
 

@@ -19,9 +19,9 @@ for threshold in thresholds:
 		std_reward, threshold, opt_cost, opt_reward, T ) = pickle.load(open("./mab/data/T{}/data_mab_{}_{}.p".format(T, threshold, T), "rb"))
 
 
-	opt_rewards = [opt_reward]*T
-	opt_costs =[opt_cost]*T
-	threshold_cost = [threshold]*T
+	opt_rewards = [opt_reward]*len(timesteps)
+	opt_costs =[opt_cost]*len(timesteps)
+	threshold_cost = [threshold]*len(timesteps)
 
 	logging_frequency = int(T/len(timesteps))
 
