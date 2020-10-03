@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import scipy.stats
+import os
 
 import ray
 
@@ -109,9 +110,22 @@ def get_summary(rewards_costs, num_repetitions, opt_reward, T):
 
 
 
-T = 1000000
+T = 1000
 #T = 100
 num_repetitions = 10
+
+
+
+path = os.getcwd()
+if not os.path.isdir("{}/mab/data/T{}".format(path,T)):
+	try:
+		os.mkdir("{}/mab/data/T{}".format(path,T))
+		os.mkdir("{}/mab/plots/T{}".format(path,T))
+	except OSError:
+		print ("Creation of the directories failed")
+	else:
+		print ("Successfully created the directory ")
+
 
 
 ##################################################
@@ -131,14 +145,17 @@ opt_policy_means = banditenv.evaluate_policy(opt_policy)
 ###################################################
 
 
+opt_reward = opt_policy_means[0]
+opt_cost = opt_policy_means[1]
+
 opt_rewards = [opt_policy_means[0]]*T
-opt_cost =[opt_policy_means[1]]*T
+opt_costs =[opt_policy_means[1]]*T
 threshold_cost = [threshold]*T
 
-print("Opt policy ", opt_policy)
-print("opt policy means ", opt_policy_means)
-print("true reward means ", reward_gaussian_means)
-print("true costs means ", cost_gaussian_means)
+# print("Opt policy ", opt_policy)
+# print("opt policy means ", opt_policy_means)
+# print("true reward means ", reward_gaussian_means)
+# print("true costs means ", cost_gaussian_means)
 
 
 
@@ -148,17 +165,17 @@ rewards_costs = ray.get(rewards_costs)
 #rewards_costs = [run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known_arms_indicator, threshold) for _ in range(num_repetitions)]
 
 
-print(rewards_costs)
+# print(rewards_costs)
 
 mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, opt_rewards[0], T)
 
 
-print("Inst regret ", mean_regret)
-print("Reward ", mean_reward)
+# print("Inst regret ", mean_regret)
+# print("Reward ", mean_reward)
 
 timesteps = np.arange(T) + 1
 
-print("opt rewards ", opt_rewards[0])
+# print("opt rewards ", opt_rewards[0])
 
 
 font = {#'family' : 'normal',
@@ -175,16 +192,16 @@ plt.fill_between(timesteps, mean_reward - .2*std_reward, mean_reward  + .2*std_r
 plt.plot(timesteps, opt_rewards, label = "Opt rewards", linewidth = 3.5, color = "red")
 plt.legend(loc = "lower right", fontsize = 15)
 # plt.subplot(1, 2, 2)
-plt.savefig("./rewards_evolution_tau_{}.png".format(threshold))
+plt.savefig("./mab/plots/T{}/rewards_evolution_tau_{}_{}.png".format(T,threshold, T))
 
 plt.figure(figsize=(5,5))
 plt.title("Cost Evolution")
 plt.plot(timesteps, mean_cost,  label = "Costs", linewidth = 3.5, color = "blue")
 plt.fill_between(timesteps, mean_cost - .2*std_cost, mean_cost + .2*std_cost, color = "blue", alpha = .1)
-plt.plot(timesteps, opt_cost,  label = "Optimal cost", linewidth = 3.5, color = "red")
+plt.plot(timesteps, opt_costs,  label = "Optimal cost", linewidth = 3.5, color = "red")
 plt.plot(timesteps, threshold_cost,  label = "Threshold cost", linewidth = 3.5, color = "black")
 plt.legend(loc = "lower right", fontsize = 15)
-plt.savefig("./cost_evolution_tau_{}.png".format(threshold))
+plt.savefig("./mab/plots/T{}/cost_evolution_tau_{}_{}.png".format(T,threshold, T))
 
 
 plt.figure(figsize=(5,5))
@@ -193,7 +210,11 @@ plt.plot(timesteps, mean_regret, linewidth = 3.5, color = "black")
 plt.fill_between(timesteps, mean_regret - .2*std_regret, mean_regret + .2*std_regret, color = "blue", alpha = .1)
 plt.legend(loc="upper left")
 #plt.title("Constrained Bandits")
-plt.savefig("./constrained_regrets_tau_{}.png".format(threshold))
+plt.savefig("./mab/plots/T{}/constrained_regrets_tau_{}_{}.png".format(T,threshold,T))
 
 
 
+import pickle
+
+pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
+	std_reward, threshold, opt_cost, opt_reward, T ), open("./mab/data/T{}/data_mab_{}_{}.p".format(T, threshold, T), "wb"))
