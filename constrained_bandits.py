@@ -68,6 +68,7 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 			raise ValueError("Policy didn't sum to 1. It summed to {} instead.".format(sum(policy)))
 		index = banditalg.get_arm_index()
 		our_policy_means = banditenv.evaluate_policy(policy)
+		
 		local_rewards.append(our_policy_means[0])
 		local_costs.append(our_policy_means[1])
 
@@ -86,36 +87,6 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 
 	return costs, rewards
 
-
-# def get_summary(rewards_costs, num_repetitions, opt_reward, T, logging_frequency):
-# 	rewards = []
-# 	costs = []
-# 	regrets = []
-# 	for i in range(len(rewards_costs)):
-# 		costs.append(rewards_costs[i][0])
-# 		rewards.append(rewards_costs[i][1])
-# 		regrets.append(np.cumsum(opt_reward - rewards_costs[i][1]))
-
-# 	reg_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-# 	cost_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-# 	regret_summary = np.zeros((num_repetitions, int(T/logging_frequency)))
-# 	for i in range(num_repetitions):
-# 		cost_summary[i, :] = costs[i]
-# 		reg_summary[i, :] = rewards[i]
-# 		regret_summary[i, :] = regrets[i]
-
-
-# 	mean_cost = np.mean(cost_summary, axis = 0)
-# 	std_cost = np.std(cost_summary, axis = 0)
-
-# 	mean_reward = np.mean(reg_summary, axis = 0)
-# 	std_reward = np.std(reg_summary, axis = 0)
-
-# 	mean_regret = np.mean(regret_summary, axis = 0)
-# 	std_regret = np.mean(regret_summary, axis = 0)
-
-
-# 	return mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret
 
 
 
