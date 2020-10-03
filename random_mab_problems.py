@@ -88,6 +88,7 @@ def run_random_mab_sweep_experiment(T, num_arms, lower_threshold , do_UCB = Fals
 	  local_costs.append(our_policy_means[1])
 
 	  if t%logging_frequency == 0:
+		  print("iteration {}".format(t))
 		  rewards.append(np.mean(local_rewards))
 		  costs.append(np.mean(local_costs))
 		  local_rewards = []
@@ -109,10 +110,10 @@ def run_random_mab_sweep_experiment(T, num_arms, lower_threshold , do_UCB = Fals
 
 
 
-T = 1000
+T = 1000000
 num_arms = 10
 num_repetitions = 10
-logging_frequency = 10
+logging_frequency = 100
 
 lower_thresholds = [0, .2, .5]
 colors = ["black", "blue", "red", "green", "violet", "purple", "orange", "yellow"]

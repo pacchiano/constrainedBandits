@@ -68,11 +68,12 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 			raise ValueError("Policy didn't sum to 1. It summed to {} instead.".format(sum(policy)))
 		index = banditalg.get_arm_index()
 		our_policy_means = banditenv.evaluate_policy(policy)
-		
+
 		local_rewards.append(our_policy_means[0])
 		local_costs.append(our_policy_means[1])
 
 		if t%logging_frequency == 0:
+		  print("iteration {}".format(t))
 		  rewards.append(np.mean(local_rewards))
 		  costs.append(np.mean(local_costs))
 		  local_rewards = []
@@ -90,11 +91,11 @@ def run_constrained_bandits(T, reward_gaussian_means, cost_gaussian_means, known
 
 
 
-T = 1000
+T = 1000000
 #T = 100
 num_repetitions = 10
 threshold = .5
-logging_frequency = 10
+logging_frequency = 100
 
 
 path = os.getcwd()
