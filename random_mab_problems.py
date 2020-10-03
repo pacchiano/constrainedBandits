@@ -89,26 +89,29 @@ def run_random_mab_sweep_experiment(T, num_arms, do_UCB = False, logging_frequen
 	  (r, f) = banditenv.get_rewards(index) 
 	  banditalg.update(index, r, f)
 
-	return costs, rewards
+	return costs, rewards, opt_policy_means[0]
 
 
 
 
 
-T = 1000000
+
+
+
+T = 1000
 num_arms = 10
-num_experiments = 10
-logging_frequency = 100
+num_repetitions = 10
+logging_frequency = 10
 
 if int(T/logging_frequency)*logging_frequency < T:
 	raise ValueError("The logging frequency does not divide T.")
 
 
 path = os.getcwd()
-if not os.path.isdir("{}/linear_experiments/data/RandomT{}".format(path,T)):
+if not os.path.isdir("{}/mab/data/RandomT{}".format(path,T)):
 	try:
-		os.mkdir("{}/linear_experiments/data/RandomT{}".format(path,T))
-		os.mkdir("{}/linear_experiments/plots/RandomT{}".format(path,T))
+		os.mkdir("{}/mab/data/RandomT{}".format(path,T))
+		os.mkdir("{}/mab/plots/RandomT{}".format(path,T))
 	except OSError:
 		print ("Creation of the directories failed")
 	else:
@@ -117,7 +120,54 @@ if not os.path.isdir("{}/linear_experiments/data/RandomT{}".format(path,T)):
 
 
 
+rewards_costs = [run_random_mab_sweep_experiment.remote(T, num_arms, do_UCB = False, 
+	logging_frequency = logging_frequency) for _ in range(num_repetitions)]
+rewards_costs = ray.get(rewards_costs)
+#opt_reward = rewards_costs[-1]
+#rewards_costs = (rewards_costs[0], rewards_costs[1])
 
+#opt_rewards = [rewards_costs[-1]]*int(T/logging_frequency)
+opt_rewards = [ rewards_costs[i][-1] for i in range(len(rewards_costs))  ]
+opt_rewards_average = np.average(opt_rewards)
+
+# import IPython
+# IPython.embed()
+# raise ValueError("ASdf")
+mean_cost, std_cost, mean_reward, std_reward, mean_regret, std_regret = get_summary(rewards_costs, num_repetitions, 
+	opt_rewards_average, T, logging_frequency)
+
+
+
+timesteps = np.arange(int(T/logging_frequency))*logging_frequency + 1
+
+
+
+font = {#'family' : 'normal',
+        #'weight' : 'bold',
+        'size'   : 16}
+
+matplotlib.rc('font', **font)
+
+plt.figure(figsize=(5,5))
+
+
+
+plt.title("Regret")
+plt.plot(timesteps, mean_regret, linewidth = 3.5, color = "black")
+plt.fill_between(timesteps, mean_regret - .2*std_regret, mean_regret + .2*std_regret, color = "blue", alpha = .1)
+plt.legend(loc="upper left")
+#plt.title("Constrained Bandits")
+plt.savefig("./mab/plots/RandomT{}/constrained_regrets_{}.png".format(T,T))
+
+
+
+
+
+
+import pickle
+
+pickle.dump((timesteps, mean_regret, std_regret, mean_cost, std_cost, mean_reward, 
+	std_reward, opt_rewards_average, T ), open("./mab/data/RandomT{}/data_mab_{}.p".format(T, T), "wb"))
 
 
 
